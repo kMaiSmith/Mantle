@@ -9,14 +9,14 @@ import com.mojang.math.Vector3f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.minecraftforge.client.model.data.EmptyModelData;
-import net.minecraftforge.client.model.data.IModelData;
+import net.minecraftforge.client.model.data.ModelData;
 import slimeknights.mantle.client.book.structure.StructureInfo;
 import slimeknights.mantle.client.book.structure.level.TemplateLevel;
 import slimeknights.mantle.client.render.MantleRenderTypes;
@@ -62,7 +62,7 @@ public class StructureElement extends SizedBookElement {
   }
 
   @Override
-  public void draw(PoseStack transform, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void draw(PoseStack transform, int mouseX, int mouseY, float partialTicks, Font fontRenderer, RenderType renderType) {
     MultiBufferSource.BufferSource buffer = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
     PoseStack.Pose lastEntryBeforeTry = transform.last();
 
@@ -112,7 +112,7 @@ public class StructureElement extends SizedBookElement {
               else
                 overlay = OverlayTexture.NO_OVERLAY;
 
-              IModelData modelData = EmptyModelData.INSTANCE;
+              ModelData modelData = ModelData.EMPTY;
               BlockEntity te = structureWorld.getBlockEntity(pos);
 
               if (te != null)
@@ -121,7 +121,7 @@ public class StructureElement extends SizedBookElement {
               blockRender.getModelRenderer().tesselateBlock(
                 structureWorld, blockRender.getBlockModel(state), state, pos, transform,
                 buffer.getBuffer(MantleRenderTypes.TRANSLUCENT_FULLBRIGHT), false, structureWorld.random, state.getSeed(pos),
-                overlay, modelData
+                overlay, modelData, renderType
               );
 
               transform.popPose();

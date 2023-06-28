@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.client.model.data.IModelData;
+import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.client.model.data.ModelProperty;
 import net.minecraftforge.registries.ForgeRegistries;
 import slimeknights.mantle.block.entity.IRetexturedBlockEntity;
@@ -94,9 +94,9 @@ public final class RetexturedHelper {
     if (level != null && level.isClientSide) {
       Block texture = self.getTexture();
       texture = texture == Blocks.AIR ? null : texture;
-      IModelData data = self.getModelData();
-      if (data.getData(BLOCK_PROPERTY) != texture) {
-        data.setData(BLOCK_PROPERTY, texture);
+      ModelData data = self.getModelData();
+      if (data.get(BLOCK_PROPERTY) != texture) {
+        data.derive().with(BLOCK_PROPERTY, texture).build();
         self.requestModelDataUpdate();
         BlockState state = self.getBlockState();
         level.sendBlockUpdated(self.getBlockPos(), state, state, 0);

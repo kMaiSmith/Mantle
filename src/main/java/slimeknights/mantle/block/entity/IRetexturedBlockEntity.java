@@ -3,7 +3,8 @@ package slimeknights.mantle.block.entity;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.client.model.data.IModelData;
+import net.minecraftforge.client.model.IModelBuilder;
+import net.minecraftforge.client.model.data.ModelData;
 import slimeknights.mantle.block.RetexturedBlock;
 import slimeknights.mantle.client.model.data.SinglePropertyData;
 import slimeknights.mantle.util.RetexturedHelper;
@@ -46,13 +47,13 @@ public interface IRetexturedBlockEntity {
    * Gets the model data instance with the relevant texture block
    * @return  Model data for the TE
    */
-  default IModelData getRetexturedModelData() {
+  default ModelData getRetexturedModelData() {
     // texture not loaded
     Block block = getTexture();
     // cannot support air, saves a conditional on usage
     if (block == Blocks.AIR) {
       block = null;
     }
-    return new SinglePropertyData<>(RetexturedHelper.BLOCK_PROPERTY, block);
+    return ModelData.builder().with(RetexturedHelper.BLOCK_PROPERTY, block).build();
   }
 }

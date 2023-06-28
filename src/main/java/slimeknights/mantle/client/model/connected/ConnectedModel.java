@@ -13,6 +13,7 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.math.Transformation;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockElement;
 import net.minecraft.client.renderer.block.model.BlockElementFace;
@@ -31,18 +32,21 @@ import net.minecraft.core.Direction.Plane;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.GsonHelper;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraftforge.client.model.IModelConfiguration;
 import net.minecraftforge.client.model.IModelLoader;
 import net.minecraftforge.client.model.data.IModelData;
+import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.client.model.data.ModelProperty;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
 import slimeknights.mantle.block.IMultipartConnectedBlock;
 import slimeknights.mantle.client.model.data.SinglePropertyData;
 import slimeknights.mantle.client.model.util.DynamicBakedWrapper;
 import slimeknights.mantle.client.model.util.ExtraTextureConfiguration;
+import slimeknights.mantle.client.model.util.ModelConfigurationWrapper;
 import slimeknights.mantle.client.model.util.ModelTextureIteratable;
 import slimeknights.mantle.client.model.util.SimpleBlockModel;
 
@@ -140,7 +144,7 @@ public class ConnectedModel implements IModelGeometry<ConnectedModel> {
   @SuppressWarnings("WeakerAccess")
   protected static class Baked extends DynamicBakedWrapper<BakedModel> {
     private final ConnectedModel parent;
-    private final IModelConfiguration owner;
+    private final Model owner;
     private final ModelState transforms;
     private final BakedModel[] cache = new BakedModel[64];
     private final Map<String,String> nameMappingCache = new ConcurrentHashMap<>();
@@ -349,21 +353,25 @@ public class ConnectedModel implements IModelGeometry<ConnectedModel> {
 
     @Nonnull
     @Override
-    public IModelData getModelData(BlockAndTintGetter world, BlockPos pos, BlockState state, IModelData tileData) {
+    public ModelData getModelData(BlockAndTintGetter world, BlockPos pos, BlockState state, ModelData tileData) {
       // if the data is already defined, return it, will happen in multipart models
-      if (tileData.getData(CONNECTIONS) != null) {
+      if (tileData.get(CONNECTIONS) != null) {
         return tileData;
       }
 
       // if the property is not supported, make new data instance
-      IModelData data = tileData;
-      if (!data.hasProperty(CONNECTIONS)) {
-        data = new SinglePropertyData<>(CONNECTIONS);
+      ModelData data = tileData;
+      if (!data.getProperties().contains(CONNECTIONS)) {
+        data = new SinglePropertyData<>(CONNECTIONS).getModel();
       }
 
       // gather connections data
       Transformation rotation = transforms.getRotation();
-      data.setData(CONNECTIONS, getConnections((dir) -> parent.sides.contains(dir) && parent.connectionPredicate.test(state, world.getBlockState(pos.relative(rotation.rotateTransform(dir))))));
+      ModelData.Builder builder = data.derive();
+      data = builder.with(CONNECTIONS, getConnections((dir) ->
+        parent.sides.contains(dir) && parent.connectionPredicate.test(
+          state, world.getBlockState(pos.relative(rotation.rotateTransform(dir))))))
+        .build();
       return data;
     }
 
@@ -374,29 +382,30 @@ public class ConnectedModel implements IModelGeometry<ConnectedModel> {
      * @param side         Cullface
      * @param rand         Random instance
      * @param data         Model data instance
+     * @param renderType   Render type instance
      * @return             Model quads for the given side
      */
-    protected synchronized List<BakedQuad> getCachedQuads(byte connections, @Nullable BlockState state, @Nullable Direction side, Random rand, IModelData data) {
+    protected synchronized List<BakedQuad> getCachedQuads(byte connections, @Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData data, RenderType renderType) {
       // bake a new model if the orientation is not yet baked
       if (cache[connections] == null) {
         cache[connections] = applyConnections(connections);
       }
 
       // get the model for the given orientation
-      return cache[connections].getQuads(state, side, rand, data);
+      return cache[connections].getQuads(state, side, rand, data, renderType);
     }
 
     @Nonnull
     @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, Random rand, IModelData data) {
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData data, RenderType renderType) {
       // try model data first
-      Byte connections = data.getData(CONNECTIONS);
+      Byte connections = data.get(CONNECTIONS);
       // if model data failed, try block state
       // temporary fallback until Forge has model data in multipart/weighted random
       if (connections == null) {
         // no state? return original
         if (state == null) {
-          return originalModel.getQuads(null, side, rand, data);
+          return originalModel.getQuads(null, side, rand, data, renderType);
         }
         // this will return original if the state is missing all properties
         Transformation rotation = transforms.getRotation();
@@ -409,7 +418,7 @@ public class ConnectedModel implements IModelGeometry<ConnectedModel> {
         });
       }
       // get quads using connections
-      return getCachedQuads(connections, state, side, rand, data);
+      return getCachedQuads(connections, state, side, rand, data, renderType);
     }
   }
 
