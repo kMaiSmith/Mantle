@@ -11,8 +11,6 @@ import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.ClickEvent.Action;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -68,7 +66,7 @@ public class DumpAllTagsCommand {
    * @return  Clickable text component
    */
   protected static Component getOutputComponent(File file) {
-    return new TextComponent(file.getAbsolutePath()).withStyle(style -> style.setUnderlined(true).withClickEvent(new ClickEvent(Action.OPEN_FILE, file.getAbsolutePath())));
+    return Component.literal(file.getAbsolutePath()).withStyle(style -> style.setUnderlined(true).withClickEvent(new ClickEvent(Action.OPEN_FILE, file.getAbsolutePath())));
   }
 
   /** Dumps all tags to the game directory */
@@ -76,7 +74,7 @@ public class DumpAllTagsCommand {
     File output = getOutputFile(context);
     int tagsDumped = context.getSource().registryAccess().registries().mapToInt(r -> runForFolder(context, r.key(), output)).sum();
     // print the output path
-    context.getSource().sendSuccess(new TranslatableComponent("command.mantle.dump_all_tags.success", getOutputComponent(output)), true);
+    context.getSource().sendSuccess(Component.translatable("command.mantle.dump_all_tags.success", getOutputComponent(output)), true);
     return tagsDumped;
   }
 
@@ -86,7 +84,7 @@ public class DumpAllTagsCommand {
     Registry<?> registry = RegistryArgument.getResult(context, "type");
     int result = runForFolder(context, registry.key(), output);
     // print result
-    context.getSource().sendSuccess(new TranslatableComponent("command.mantle.dump_all_tags.type_success", registry.key().location(), getOutputComponent(output)), true);
+    context.getSource().sendSuccess(Component.translatable("command.mantle.dump_all_tags.type_success", registry.key().location(), getOutputComponent(output)), true);
     return result;
   }
 
