@@ -1,7 +1,9 @@
 package slimeknights.mantle;
 
 import net.minecraft.Util;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
+import net.minecraft.data.PackOutput;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -11,7 +13,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -23,6 +24,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegisterEvent;
 import net.minecraftforge.data.event.GatherDataEvent;
+import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import slimeknights.mantle.block.entity.MantleSignBlockEntity;
@@ -95,13 +97,16 @@ public class Mantle {
   }
 
   @SubscribeEvent
-  public void registerRecipeSerializers(RegisterEvent event) {
+  public void handleRegisterEvent(RegisterEvent event) {
     event.register(ForgeRegistries.Keys.RECIPE_SERIALIZERS,
       helper -> {
         helper.register("crafting_shaped_fallback", new ShapedFallbackRecipe.Serializer());
-        helper.register("crafting_shaped_retextured", new ShapedRetexturedRecipe.Serializer(), );
+        helper.register("crafting_shaped_retextured", new ShapedRetexturedRecipe.Serializer());
       }
     );
+
+    BlockEntityTypeRegistryAdapter adapter = new BlockEntityTypeRegistryAdapter(event.getForgeRegistry());
+    adapter.register(MantleSignBlockEntity::new, "sign", MantleSignBlockEntity::buildSignBlocks);
 
     CraftingHelper.register(TagEmptyCondition.SERIALIZER);
     CraftingHelper.register(FluidContainerIngredient.ID, FluidContainerIngredient.SERIALIZER);
@@ -141,25 +146,13 @@ public class Mantle {
   }
 
   @SubscribeEvent
-  public void registerBlockEntities(RegisterEvent event) {
-    event.register(ForgeRegistries.Keys.BLOCK_ENTITY_TYPES,
-      helper -> {
-        helper.register(new ResourceLocation(Mantle.modId, "sign"), MantleSignBlockEntity::new);
-      }
-    );
-    BlockEntityTypeRegistryAdapter adapter = new BlockEntityTypeRegistryAdapter(event.getRegistry());
-    adapter.register(MantleSignBlockEntity::new, "sign", MantleSignBlockEntity::buildSignBlocks);
-  }
-
-  @SubscribeEvent
   public void gatherData(GatherDataEvent event) {
     DataGenerator generator = event.getGenerator();
-    if (event.includeServer()) {
-      generator.addProvider(new MantleFluidTagProvider(generator, event.getExistingFileHelper()));
-    }
-    if (event.includeClient()) {
-      generator.addProvider(new MantleFluidTooltipProvider(generator));
-    }
+    PackOutput packOutput = generator.getPackOutput();
+    CompletableFuture<HolderLookup.Provider> lookupProvider = event.getLookupProvider();
+
+    generator.addProvider(event.includeServer(), new MantleFluidTagProvider(packOutput, lookupProvider, event.getExistingFileHelper()));
+    generator.addProvider(event.includeClient(), new MantleFluidTooltipProvider(generator));
   }
 
   /**
