@@ -10,7 +10,6 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -39,8 +38,8 @@ public class DumpLootModifiers {
   private static final String LOOT_MODIFIER_PATH = GLOBAL_LOOT_MODIFIERS.getNamespace() + "/" + GLOBAL_LOOT_MODIFIERS.getPath();
 
   // loot modifiers
-  private static final Component LOOT_MODIFIER_SUCCESS_LOG = new TranslatableComponent("command.mantle.dump_loot_modifiers.success_log");
-  protected static final SimpleCommandExceptionType ERROR_READING_LOOT_MODIFIERS = new SimpleCommandExceptionType(new TranslatableComponent("command.mantle.dump_loot_modifiers.read_error", GLOBAL_LOOT_MODIFIERS));
+  private static final Component LOOT_MODIFIER_SUCCESS_LOG = Component.translatable("command.mantle.dump_loot_modifiers.success_log");
+  protected static final SimpleCommandExceptionType ERROR_READING_LOOT_MODIFIERS = new SimpleCommandExceptionType(Component.translatable("command.mantle.dump_loot_modifiers.read_error", GLOBAL_LOOT_MODIFIERS));
 
   /**
    * Registers this sub command with the root command
@@ -114,7 +113,7 @@ public class DumpLootModifiers {
       } catch (IOException ex) {
         Mantle.logger.error("Couldn't save global loot manager to {}", path, ex);
       }
-      context.getSource().sendSuccess(new TranslatableComponent("command.mantle.dump_loot_modifiers.success_save", DumpAllTagsCommand.getOutputComponent(output)), true);
+      context.getSource().sendSuccess(Component.translatable("command.mantle.dump_loot_modifiers.success_save", DumpAllTagsCommand.getOutputComponent(output)), true);
     } else {
       // print to console
       context.getSource().sendSuccess(LOOT_MODIFIER_SUCCESS_LOG, true);

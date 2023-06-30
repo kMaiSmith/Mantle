@@ -65,7 +65,7 @@ public abstract class MergingJsonDataLoader<B> implements ResourceManagerReloadL
       try {
         for (Resource resource : manager.getResources(filePath)) {
           try (
-            InputStream inputstream = resource.getInputStream();
+            InputStream inputstream = resource.open();
             Reader reader = new BufferedReader(new InputStreamReader(inputstream, StandardCharsets.UTF_8))
           ) {
             JsonElement json = GsonHelper.fromJson(gson, reader, JsonElement.class);
