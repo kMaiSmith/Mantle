@@ -41,7 +41,9 @@ import net.minecraftforge.client.model.IModelLoader;
 import net.minecraftforge.client.model.data.IModelData;
 import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.client.model.data.ModelProperty;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 import slimeknights.mantle.block.IMultipartConnectedBlock;
 import slimeknights.mantle.client.model.data.SinglePropertyData;
 import slimeknights.mantle.client.model.util.DynamicBakedWrapper;
@@ -71,7 +73,7 @@ import java.util.function.Predicate;
  * Model that handles generating variants for connected textures
  */
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class ConnectedModel implements IModelGeometry<ConnectedModel> {
+public class ConnectedModel implements IUnbakedGeometry<ConnectedModel> {
 
   /** Property of the connections cache key. Contains a 6 bit number with each bit representing a direction */
   private static final ModelProperty<Byte> CONNECTIONS = new ModelProperty<>();
@@ -136,9 +138,14 @@ public class ConnectedModel implements IModelGeometry<ConnectedModel> {
   }
 
   @Override
-  public BakedModel bake(IModelConfiguration owner, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides, ResourceLocation location) {
-    BakedModel baked = model.bakeModel(owner, transform, overrides, spriteGetter, location);
-    return new Baked(this, new ExtraTextureConfiguration(owner, extraTextures), transform, baked);
+  public BakedModel bake(IGeometryBakingContext iGeometryBakingContext, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides, ResourceLocation location) {
+    BakedModel baked = model.bakeModel(iGeometryBakingContext, transform, overrides, spriteGetter, location);
+    return new Baked(this, new ExtraTextureConfiguration(iGeometryBakingContext, extraTextures), transform, baked);
+  }
+
+  @Override
+  public Collection<Material> getMaterials(IGeometryBakingContext iGeometryBakingContext, Function<ResourceLocation, UnbakedModel> function, Set<Pair<String, String>> set) {
+    return null;
   }
 
   @SuppressWarnings("WeakerAccess")

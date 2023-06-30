@@ -66,7 +66,7 @@ public final class RetexturedHelper {
     if (block == Blocks.AIR) {
       return "";
     }
-    return Objects.requireNonNull(block.getRegistryName()).toString();
+    return Objects.requireNonNull(block.getRenderPropertiesInternal().).toString();
   }
 
 
