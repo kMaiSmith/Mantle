@@ -175,7 +175,7 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
    * @param missingTextureErrors  Missing texture set
    * @return  Textures dependencies
    */
-  public static Collection<Material> getMaterial(IGeometryBakingContext bakingContext, List<BlockElement> elements, Set<Pair<String,String>> missingTextureErrors) {
+  public static Collection<Material> getMaterials(IGeometryBakingContext bakingContext, List<BlockElement> elements, Set<Pair<String,String>> missingTextureErrors) {
     // always need a particle texture
     Set<Material> textures = Sets.newHashSet(bakingContext.getMaterial("particle"));
     // iterate all elements, fetching needed textures from the material
