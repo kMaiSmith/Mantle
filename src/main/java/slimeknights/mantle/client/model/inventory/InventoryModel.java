@@ -35,7 +35,7 @@ public class InventoryModel implements IModelGeometry<InventoryModel> {
 
   @Override
   public Collection<Material> getTextures(IModelConfiguration owner, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
-    return model.getTextures(owner, modelGetter, missingTextureErrors);
+    return model.getMaterial(owner, modelGetter, missingTextureErrors);
   }
 
   @Override

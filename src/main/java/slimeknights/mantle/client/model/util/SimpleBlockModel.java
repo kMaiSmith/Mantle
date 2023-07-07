@@ -27,6 +27,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraftforge.client.extensions.IForgeBakedModel;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 import slimeknights.mantle.Mantle;
@@ -103,7 +104,7 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
     Set<UnbakedModel> chain = Sets.newLinkedHashSet();
 
     // load the first model directly
-    parent = getParent(modelGetter, chain, parentLocation, IGeometryBakingContext.getModelName());
+    parent = getParent(modelGetter, chain, parentLocation, bakingContext.getModelName());
     // null means no model, so set missing
     if (parent == null) {
       parent = getMissing(modelGetter);
@@ -174,13 +175,13 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
    * @param missingTextureErrors  Missing texture set
    * @return  Textures dependencies
    */
-  public static Collection<Material> getTextures(IGeometryBakingContext bakingContext, List<BlockElement> elements, Set<Pair<String,String>> missingTextureErrors) {
+  public static Collection<Material> getMaterial(IGeometryBakingContext bakingContext, List<BlockElement> elements, Set<Pair<String,String>> missingTextureErrors) {
     // always need a particle texture
-    Set<Material> textures = Sets.newHashSet(bakingContext.resolveTexture("particle"));
+    Set<Material> textures = Sets.newHashSet(bakingContext.getMaterial("particle"));
     // iterate all elements, fetching needed textures from the material
     for(BlockElement part : elements) {
       for(BlockElementFace face : part.faces.values()) {
-        Material material = bakingContext.resolveTexture(face.texture);
+        Material material = bakingContext.getMaterial(face.texture);
         if (Objects.equals(material.texture(), MissingTextureAtlasSprite.getLocation())) {
           missingTextureErrors.add(Pair.of(face.texture, bakingContext.getModelName()));
         }
@@ -197,11 +198,10 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
    * @param missingTextureErrors  Missing texture set
    * @return  Textures dependencies
    */
-  @Override
-  public Collection<Material> getTextures(IGeometryBakingContext bakingContext, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
-    this.fetchParent(bakingContext, modelGetter);
-    return getTextures(bakingContext, getElements(), missingTextureErrors);
-  }
+//  public Collection<Material> getTextures(IGeometryBakingContext bakingContext, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
+//    this.fetchParent(bakingContext, modelGetter);
+//    return getTextures(bakingContext, getElements(), missingTextureErrors);
+//  }
 
 
   /* Baking */
@@ -209,13 +209,13 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
   /**
    * Bakes a single part of the model into the builder
    * @param builder       Baked model builder
-   * @param owner         Model owner
+   * @param bakingContext Context of the geometry
    * @param part          Part to bake
    * @param transform     Model transforms
    * @param spriteGetter  Sprite getter
    * @param location      Model location
    */
-  public static void bakePart(SimpleBakedModel.Builder builder, IModelConfiguration owner, BlockElement part, ModelState transform, Function<Material,TextureAtlasSprite> spriteGetter, ResourceLocation location) {
+  public static void bakePart(SimpleBakedModel.Builder builder, IGeometryBakingContext bakingContext, BlockElement part, ModelState transform, Function<Material,TextureAtlasSprite> spriteGetter, ResourceLocation location) {
     for(Direction direction : part.faces.keySet()) {
       BlockElementFace face = part.faces.get(direction);
       // ensure the name is not prefixed (it always is)
@@ -224,7 +224,7 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
         texture = texture.substring(1);
       }
       // bake the face
-      TextureAtlasSprite sprite = spriteGetter.apply(owner.resolveTexture(texture));
+      TextureAtlasSprite sprite = spriteGetter.apply(bakingContext.getMaterial(texture));
       BakedQuad bakedQuad = BlockModel.bakeFace(part, face, sprite, direction, transform, location);
       // apply cull face
       if (face.cullForDirection == null) {
@@ -237,7 +237,7 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
 
   /**
    * Bakes a list of block part elements into a model
-   * @param owner         Model configuration
+   * @param bakingContext Context
    * @param elements      Model elements
    * @param transform     Model transform
    * @param overrides     Model overrides
@@ -247,8 +247,8 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
    */
   public static BakedModel bakeModel(IGeometryBakingContext bakingContext, List<BlockElement> elements, ModelState transform, ItemOverrides overrides, Function<Material,TextureAtlasSprite> spriteGetter, ResourceLocation location) {
     // iterate parts, adding to the builder
-    TextureAtlasSprite particle = spriteGetter.apply(bakingContext.resolveTexture("particle"));
-    SimpleBakedModel.Builder builder = new SimpleBakedModel.Builder(bakingContext, overrides).particle(particle);
+    TextureAtlasSprite particle = spriteGetter.apply(bakingContext.getMaterial("particle"));
+    SimpleBakedModel.Builder builder = new SimpleBakedModel.Builder((BlockModel) bakingContext, overrides, bakingContext.isGui3d()).particle(particle);
     for(BlockElement part : elements) {
       bakePart(builder, bakingContext, part, transform, spriteGetter, location);
     }
@@ -256,19 +256,19 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
   }
 
   /**
-   * Same as {@link #bakeModel(IModelConfiguration, List, ModelState, ItemOverrides, Function, ResourceLocation)}, but passes in sensible defaults for values unneeded in dynamic models
-   * @param owner      Model configuration
+   * Same as {@link #bakeModel(IGeometryBakingContext, List, ModelState, ItemOverrides, Function, ResourceLocation)}, but passes in sensible defaults for values unneeded in dynamic models
+   * @param bakingContext  Baking context configuration
    * @param elements   Elements to bake
    * @param transform  Model transform
    * @return Baked model
    */
   public static BakedModel bakeDynamic(IGeometryBakingContext bakingContext, List<BlockElement> elements, ModelState transform) {
-    return bakeModel(bakingContext, elements, transform, ItemOverrides.EMPTY, ForgeModelBakery.defaultTextureGetter(), BAKE_LOCATION);
+    return bakeModel(bakingContext, elements, transform, ItemOverrides.EMPTY, Material::sprite, BAKE_LOCATION);//TODO switch out Material::Sprite for a default texture
   }
 
   /**
    * Bakes the given block model
-   * @param owner         Model configuration
+   * @param bakingContext Context of the model to be baked
    * @param transform     Transform to apply
    * @param overrides     Item overrides in baking
    * @param spriteGetter  Sprite getter instance
@@ -285,8 +285,8 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
   }
 
   /**
-   * Same as {@link #bakeModel(IModelConfiguration, ModelState, ItemOverrides, Function, ResourceLocation)}, but passes in sensible defaults for values unneeded in dynamic models
-   * @param owner         Model configuration
+   * Same as {@link #bakeModel(IGeometryBakingContext, ModelState, ItemOverrides, Function, ResourceLocation)}, but passes in sensible defaults for values unneeded in dynamic models
+   * @param bakingContext Context of the model to be baked
    * @param transform     Transform to apply
    * @return  Baked model
    */

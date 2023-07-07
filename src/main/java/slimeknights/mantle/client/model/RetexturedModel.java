@@ -34,7 +34,10 @@ import net.minecraftforge.client.model.IModelConfiguration;
 import net.minecraftforge.client.model.IModelLoader;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.client.model.data.IModelData;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 import slimeknights.mantle.client.model.util.ColoredBlockModel;
 import slimeknights.mantle.client.model.util.DynamicBakedWrapper;
 import slimeknights.mantle.client.model.util.ModelConfigurationWrapper;
@@ -60,7 +63,7 @@ import java.util.function.Function;
  */
 @SuppressWarnings("WeakerAccess")
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class RetexturedModel implements IModelGeometry<RetexturedModel> {
+public class RetexturedModel implements IUnbakedGeometry<RetexturedModel> {
   private final ColoredBlockModel model;
   private final Set<String> retextured;
 
@@ -70,15 +73,15 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
   }
 
   @Override
-  public Collection<Material> getTextures(IModelConfiguration owner, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
-    return model.getTextures(owner, modelGetter, missingTextureErrors);
+  public Collection<Material> getTextures(IGeometryBakingContext bakingContext, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
+    return model.getTextures(bakingContext, modelGetter, missingTextureErrors);
   }
 
   @Override
-  public BakedModel bake(IModelConfiguration owner, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides, ResourceLocation location) {
+  public BakedModel bake(IGeometryBakingContext bakingContext, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides, ResourceLocation location) {
     // bake the model and return
-    BakedModel baked = model.bake(owner, bakery, spriteGetter, transform, overrides, location);
-    return new Baked(baked, owner, model, transform, getAllRetextured(owner, this.model.getModel(), retextured));
+    BakedModel baked = model.bake(bakingContext, bakery, spriteGetter, transform, overrides, location);
+    return new Baked(baked, bakingContext, model, transform, getAllRetextured(bakingContext, this.model.getModel(), retextured));
   }
 
   /**
@@ -88,9 +91,9 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
    * @param originalSet  Original list of names to retexture
    * @return  Set of textures including parent textures
    */
-  public static Set<String> getAllRetextured(IModelConfiguration owner, SimpleBlockModel model, Set<String> originalSet) {
+  public static Set<String> getAllRetextured(IGeometryBakingContext bakingContext, SimpleBlockModel model, Set<String> originalSet) {
     Set<String> retextured = Sets.newHashSet(originalSet);
-    for (Map<String,Either<Material, String>> textures : ModelTextureIteratable.of(owner, model)) {
+    for (Map<String,Either<Material, String>> textures : ModelTextureIteratable.of(bakingContext, model)) {
       textures.forEach((name, either) ->
         either.ifRight(parent -> {
           if (retextured.contains(parent)) {
@@ -100,6 +103,11 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
       );
     }
     return ImmutableSet.copyOf(retextured);
+  }
+
+  @Override
+  public Collection<Material> getMaterials(IGeometryBakingContext iGeometryBakingContext, Function<ResourceLocation, UnbakedModel> function, Set<Pair<String, String>> set) {
+    return null;
   }
 
 
@@ -158,22 +166,22 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
     /** Cache of texture name to baked model */
     private final Map<ResourceLocation,BakedModel> cache = new ConcurrentHashMap<>();
     /* Properties for rebaking */
-    private final IModelConfiguration owner;
+    private final IGeometryBakingContext bakingContext;
     private final ColoredBlockModel model;
     private final ModelState transform;
     /** List of texture names that are retextured */
     private final Set<String> retextured;
 
-    public Baked(BakedModel baked, IModelConfiguration owner, ColoredBlockModel model, ModelState transform, Set<String> retextured) {
+    public Baked(BakedModel baked, IGeometryBakingContext bakingContext, ColoredBlockModel model, ModelState transform, Set<String> retextured) {
       super(baked);
       this.model = model;
-      this.owner = owner;
+      this.bakingContext = bakingContext;
       this.transform = transform;
       this.retextured = retextured;
     }
 
-    public Baked(BakedModel baked, IModelConfiguration owner, SimpleBlockModel model, ModelState transform, Set<String> retextured) {
-      this(baked, owner, new ColoredBlockModel(model, Collections.emptyList()), transform, retextured);
+    public Baked(BakedModel baked, IGeometryBakingContext bakingContext, SimpleBlockModel model, ModelState transform, Set<String> retextured) {
+      this(baked, bakingContext, new ColoredBlockModel(model, Collections.emptyList()), transform, retextured);
     }
 
     /**
@@ -182,7 +190,7 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
      * @return  Retextured model
      */
     private BakedModel getRetexturedModel(ResourceLocation name) {
-      return model.bakeDynamic(new RetexturedConfiguration(owner, retextured, name), transform);
+      return model.bakeDynamic(new RetexturedConfiguration(bakingContext, retextured, name), transform);
     }
 
     /**
@@ -195,10 +203,10 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
     }
 
     @Override
-    public TextureAtlasSprite getParticleIcon(IModelData data) {
+    public TextureAtlasSprite getParticleIcon(ModelData data) {
       // if particle is retextured, fetch particle from the cached model
       if (retextured.contains("particle")) {
-        Block block = data.getData(RetexturedHelper.BLOCK_PROPERTY);
+        Block block = data.get(RetexturedHelper.BLOCK_PROPERTY);
         if (block != null) {
           return getCachedModel(block).getParticleIcon(data);
         }
@@ -208,8 +216,8 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
 
     @Nonnull
     @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction direction, Random random, IModelData data) {
-      Block block = data.getData(RetexturedHelper.BLOCK_PROPERTY);
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction direction, Random random, ModelData data) {
+      Block block = data.get(RetexturedHelper.BLOCK_PROPERTY);
       if (block == null) {
         return originalModel.getQuads(state, direction, random, data);
       }
@@ -237,7 +245,7 @@ public class RetexturedModel implements IModelGeometry<RetexturedModel> {
      * @param retextured  Set of textures that should be retextured
      * @param texture     New texture to replace those in the set
      */
-    public RetexturedConfiguration(IModelConfiguration base, Set<String> retextured, ResourceLocation texture) {
+    public RetexturedConfiguration(IGeometryBakingContext base, Set<String> retextured, ResourceLocation texture) {
       super(base);
       this.retextured = retextured;
       this.texture = ModelLoaderRegistry.blockMaterial(texture);

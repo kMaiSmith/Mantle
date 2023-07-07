@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.Material;
 import net.minecraftforge.client.model.IModelConfiguration;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -35,12 +36,12 @@ public class ModelTextureIteratable implements Iterable<Map<String,Either<Materi
    * @param fallback  Fallback in case the owner does not contain a block model
    * @return  Iteratable over block model texture maps
    */
-  public static ModelTextureIteratable of(IModelConfiguration owner, SimpleBlockModel fallback) {
-    UnbakedModel unbaked = owner.getOwnerModel();
+  public static ModelTextureIteratable of(IGeometryBakingContext bakingContext, SimpleBlockModel fallback) {
+    UnbakedModel unbaked = bakingContext.getOwnerModel();
     if (unbaked instanceof BlockModel) {
       return new ModelTextureIteratable(null, (BlockModel)unbaked);
     }
-    return new ModelTextureIteratable(fallback.getTextures(), fallback.getParent());
+    return new ModelTextureIteratable(fallback.getMaterial(), fallback.getParent());
   }
 
   @Override

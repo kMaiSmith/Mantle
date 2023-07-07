@@ -35,8 +35,12 @@ import net.minecraftforge.client.model.IModelLoader;
 import net.minecraftforge.client.model.ItemLayerModel;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.client.model.PerspectiveMapWrapper;
+import net.minecraftforge.client.model.geometry.GeometryLoaderManager;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 import slimeknights.mantle.client.model.util.ModelTextureIteratable;
+import slimeknights.mantle.data.GenericLoaderRegistry;
 import slimeknights.mantle.util.JsonHelper;
 
 import javax.annotation.Nullable;
@@ -50,7 +54,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 @RequiredArgsConstructor
-public class NBTKeyModel implements IModelGeometry<NBTKeyModel> {
+public class NBTKeyModel implements IUnbakedGeometry<NBTKeyModel> {
   /** Model loader instance */
   public static final Loader LOADER = new Loader();
 
@@ -77,32 +81,32 @@ public class NBTKeyModel implements IModelGeometry<NBTKeyModel> {
   private Map<String,Material> textures = Collections.emptyMap();
 
   @Override
-  public Collection<Material> getTextures(IModelConfiguration owner, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
+  public Collection<Material> getMaterials(IGeometryBakingContext owner, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
     textures = new HashMap<>();
     // must have a default
-    Material defaultTexture = owner.resolveTexture("default");
+    Material defaultTexture = owner.getMaterial("default");
     textures.put("default", defaultTexture);
     if (Objects.equals(defaultTexture.texture(), MissingTextureAtlasSprite.getLocation())) {
       missingTextureErrors.add(Pair.of("default", owner.getModelName()));
     }
     // fetch others
-    UnbakedModel model = owner.getOwnerModel();
-    if (model instanceof BlockModel) {
-      ModelTextureIteratable iterable = new ModelTextureIteratable(null, (BlockModel) model);
-      for (Map<String,Either<Material,String>> map : iterable) {
-        for (String key : map.keySet()) {
-          if (!textures.containsKey(key) && owner.isTexturePresent(key)) {
-            textures.put(key, owner.resolveTexture(key));
+    if (extraTexturesKey != null) {
+      UnbakedModel model = modelGetter.apply(extraTexturesKey);
+      if (model instanceof BlockModel) {
+        ModelTextureIteratable iterable = new ModelTextureIteratable(null, (BlockModel) model);
+        for (Map<String,Either<Material,String>> map : iterable) {
+          for (String key : map.keySet()) {
+            if (!textures.containsKey(key) && owner.hasMaterial(key)) {
+              textures.put(key, owner.getMaterial(key));
+            }
           }
         }
       }
-    }
-    // fetch extra textures
-    if (extraTexturesKey != null) {
+      // fetch extra textures
       for (Pair<String,ResourceLocation> extra : EXTRA_TEXTURES.get(extraTexturesKey)) {
         String key = extra.getFirst();
         if (!textures.containsKey(key)) {
-          textures.put(key, ModelLoaderRegistry.blockMaterial(extra.getSecond()));
+          textures.put(key, GenericLoaderRegistry.blockMaterial(extra.getSecond()));
         }
       }
     }
@@ -111,14 +115,14 @@ public class NBTKeyModel implements IModelGeometry<NBTKeyModel> {
   }
 
   /** Bakes a model for the given texture */
-  private static BakedModel bakeModel(IModelConfiguration owner, Material texture, Function<Material,TextureAtlasSprite> spriteGetter, ImmutableMap<TransformType,Transformation> transformMap, ItemOverrides overrides) {
+  private static BakedModel bakeModel(IGeometryBakingContext owner, Material texture, Function<Material,TextureAtlasSprite> spriteGetter, ImmutableMap<TransformType,Transformation> transformMap, ItemOverrides overrides) {
     TextureAtlasSprite sprite = spriteGetter.apply(texture);
     ImmutableList<BakedQuad> quads = ItemLayerModel.getQuadsForSprite(-1, sprite, Transformation.identity());
     return new BakedItemModel(quads, sprite, transformMap, overrides, true, owner.isSideLit());
   }
 
   @Override
-  public BakedModel bake(IModelConfiguration owner, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides, ResourceLocation modelLocation) {
+  public BakedModel bake(IGeometryBakingContext owner, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides, ResourceLocation modelLocation) {
     ImmutableMap.Builder<String, BakedModel> variants = ImmutableMap.builder();
     ImmutableMap<TransformType,Transformation> transformMap = Maps.immutableEnumMap(PerspectiveMapWrapper.getTransforms(owner.getCombinedTransform()));
     for (Entry<String,Material> entry : textures.entrySet()) {

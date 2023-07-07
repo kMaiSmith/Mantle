@@ -17,7 +17,9 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraftforge.client.model.BakedModelWrapper;
 import net.minecraftforge.client.model.IModelConfiguration;
 import net.minecraftforge.client.model.IModelLoader;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 import slimeknights.mantle.client.model.util.SimpleBlockModel;
 
 import java.util.Collection;
@@ -29,13 +31,13 @@ import java.util.function.Function;
  * This model contains a list of fluid cuboids for the sake of rendering multiple fluid regions in world. It is used by the faucet at this time
  */
 @AllArgsConstructor
-public class FluidsModel implements IModelGeometry<FluidsModel> {
+public class FluidsModel implements IUnbakedGeometry<FluidsModel> {
   private final SimpleBlockModel model;
   private final List<FluidCuboid> fluids;
 
   @Override
-  public Collection<Material> getTextures(IModelConfiguration owner, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
-    return model.getTextures(owner, modelGetter, missingTextureErrors);
+  public Collection<Material> getMaterial(IGeometryBakingContext owner, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
+    return model.getMaterial(owner, modelGetter, missingTextureErrors);
   }
 
   @Override

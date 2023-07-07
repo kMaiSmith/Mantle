@@ -13,6 +13,7 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.math.Transformation;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockElement;
@@ -41,14 +42,15 @@ import net.minecraftforge.client.model.IModelLoader;
 import net.minecraftforge.client.model.data.IModelData;
 import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.client.model.data.ModelProperty;
+import net.minecraftforge.client.model.generators.ModelBuilder;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
 import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
+import net.minecraftforge.common.data.ExistingFileHelper;
 import slimeknights.mantle.block.IMultipartConnectedBlock;
 import slimeknights.mantle.client.model.data.SinglePropertyData;
 import slimeknights.mantle.client.model.util.DynamicBakedWrapper;
-import slimeknights.mantle.client.model.util.ExtraTextureConfiguration;
-import slimeknights.mantle.client.model.util.ModelConfigurationWrapper;
+import slimeknights.mantle.client.model.util.ExtraMaterialConfiguration;
 import slimeknights.mantle.client.model.util.ModelTextureIteratable;
 import slimeknights.mantle.client.model.util.SimpleBlockModel;
 
@@ -62,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
@@ -90,19 +91,18 @@ public class ConnectedModel implements IUnbakedGeometry<ConnectedModel> {
   /** Map of full texture name to the resulting material, filled during {@link #getTextures(IModelConfiguration, Function, Set)} */
   private Map<String,Material> extraTextures;
 
-  @Override
-  public Collection<Material> getTextures(IModelConfiguration owner, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
-    Collection<Material> textures = model.getTextures(owner, modelGetter, missingTextureErrors);
+  public Collection<Material> getTextures(IGeometryBakingContext bakingContext, Function<ResourceLocation,UnbakedModel> modelGetter, Set<Pair<String,String>> missingTextureErrors) {
+    Collection<Material> textures = model.getMaterial(bakingContext, modelGetter, missingTextureErrors);
     // for all connected textures, add suffix textures
     Map<String, Material> extraTextures = new HashMap<>();
     for (Entry<String,String[]> entry : connectedTextures.entrySet()) {
       // fetch data from the base texture
       String name = entry.getKey();
       // skip if missing
-      if (!owner.isTexturePresent(name)) {
+      if (!bakingContext.hasMaterial(name)) {
         continue;
       }
-      Material base = owner.resolveTexture(name);
+      Material base = bakingContext.getMaterial(name);
       ResourceLocation atlas = base.atlasLocation();
       ResourceLocation texture = base.texture();
       String namespace = texture.getNamespace();
@@ -119,8 +119,8 @@ public class ConnectedModel implements IUnbakedGeometry<ConnectedModel> {
         if (!extraTextures.containsKey(suffixedName)) {
           Material mat;
           // allow overriding a specific texture
-          if (owner.isTexturePresent(suffixedName)) {
-            mat = owner.resolveTexture(suffixedName);
+          if (bakingContext.hasMaterial(suffixedName)) {
+            mat = bakingContext.getMaterial(suffixedName);
           } else {
             mat = new Material(atlas, new ResourceLocation(namespace, path + "/" + suffix));
           }
@@ -138,9 +138,9 @@ public class ConnectedModel implements IUnbakedGeometry<ConnectedModel> {
   }
 
   @Override
-  public BakedModel bake(IGeometryBakingContext iGeometryBakingContext, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides, ResourceLocation location) {
-    BakedModel baked = model.bakeModel(iGeometryBakingContext, transform, overrides, spriteGetter, location);
-    return new Baked(this, new ExtraTextureConfiguration(iGeometryBakingContext, extraTextures), transform, baked);
+  public BakedModel bake(IGeometryBakingContext bakingContext, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState transform, ItemOverrides overrides, ResourceLocation location) {
+    BakedModel baked = model.bakeModel(bakingContext, transform, overrides, spriteGetter, location);
+    return new Baked(this, new ExtraMaterialConfiguration(bakingContext, extraTextures), transform, baked);
   }
 
   @Override
@@ -156,7 +156,7 @@ public class ConnectedModel implements IUnbakedGeometry<ConnectedModel> {
     private final BakedModel[] cache = new BakedModel[64];
     private final Map<String,String> nameMappingCache = new ConcurrentHashMap<>();
     private final ModelTextureIteratable modelTextures;
-    public Baked(ConnectedModel parent, IModelConfiguration owner, ModelState transforms, BakedModel baked) {
+    public Baked(ConnectedModel parent, Model owner, ModelState transforms, BakedModel baked) {
       super(baked);
       this.parent = parent;
       this.owner = owner;
@@ -430,9 +430,13 @@ public class ConnectedModel implements IUnbakedGeometry<ConnectedModel> {
   }
 
   /** Loader class containing singleton instance */
-  public static class Loader implements IModelLoader<ConnectedModel> {
+  public static class Loader extends ModelBuilder<ConnectedModel> {
     /** Shared loader instance */
     public static final ConnectedModel.Loader INSTANCE = new ConnectedModel.Loader();
+
+    protected Loader(ResourceLocation outputLocation, ExistingFileHelper existingFileHelper) {
+      super(outputLocation, existingFileHelper);
+    }
 
     @Override
     public void onResourceManagerReload(ResourceManager resourceManager) {}
