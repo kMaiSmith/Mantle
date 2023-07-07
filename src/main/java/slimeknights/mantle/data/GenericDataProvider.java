@@ -51,7 +51,7 @@ public abstract class GenericDataProvider implements DataProvider {
       String json = gson.toJson(materialJson);
       Path path = this.generator.getOutputFolder().resolve(Paths.get(type.getDirectory(), location.getNamespace(), folder, location.getPath() + ".json"));
       String hash = SHA1.hashUnencodedChars(json).toString();
-      if (!Objects.equals(cache.getHash(path), hash) || !Files.exists(path)) {
+      if (!Objects.equals(cach.getHash(path), hash) || !Files.exists(path)) {
         Files.createDirectories(path.getParent());
 
         try (BufferedWriter bufferedwriter = Files.newBufferedWriter(path)) {
