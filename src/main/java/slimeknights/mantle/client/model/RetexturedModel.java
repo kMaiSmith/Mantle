@@ -39,10 +39,9 @@ import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
 import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 import slimeknights.mantle.client.model.util.ColoredBlockModel;
-import slimeknights.mantle.client.model.util.DynamicBakedWrapper;
 import slimeknights.mantle.client.model.util.ModelConfigurationWrapper;
 import slimeknights.mantle.client.model.util.ModelHelper;
-import slimeknights.mantle.client.model.util.ModelTextureIteratable;
+import slimeknights.mantle.client.model.util.ModelTextureIterable;
 import slimeknights.mantle.client.model.util.SimpleBlockModel;
 import slimeknights.mantle.item.RetexturedBlockItem;
 import slimeknights.mantle.util.RetexturedHelper;
@@ -93,7 +92,7 @@ public class RetexturedModel implements IUnbakedGeometry<RetexturedModel> {
    */
   public static Set<String> getAllRetextured(IGeometryBakingContext bakingContext, SimpleBlockModel model, Set<String> originalSet) {
     Set<String> retextured = Sets.newHashSet(originalSet);
-    for (Map<String,Either<Material, String>> textures : ModelTextureIteratable.of(bakingContext, model)) {
+    for (Map<String,Either<Material, String>> textures : ModelTextureIterable.of(bakingContext, model)) {
       textures.forEach((name, either) ->
         either.ifRight(parent -> {
           if (retextured.contains(parent)) {

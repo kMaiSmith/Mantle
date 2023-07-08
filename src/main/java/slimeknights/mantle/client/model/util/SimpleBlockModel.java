@@ -27,7 +27,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraftforge.client.extensions.IForgeBakedModel;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 import slimeknights.mantle.Mantle;
@@ -60,19 +59,19 @@ public class SimpleBlockModel implements IUnbakedGeometry<SimpleBlockModel> {
   private final List<BlockElement> parts;
   /** Fallback textures in case the owner does not contain a block model */
   @Getter
-  private final Map<String,Either<Material, String>> textures;
+  private final Map<String,Either<Material, String>> materials;
   @Getter
   private BlockModel parent;
 
   /**
    * Creates a new simple block model
    * @param parentLocation  Location of the parent model, if unset has no parent
-   * @param textures        List of textures for iteration, in case the owner is not BlockModel
+   * @param materials        List of textures for iteration, in case the owner is not BlockModel
    * @param parts           List of parts in the model
    */
-  public SimpleBlockModel(@Nullable ResourceLocation parentLocation, Map<String,Either<Material,String>> textures, List<BlockElement> parts) {
+  public SimpleBlockModel(@Nullable ResourceLocation parentLocation, Map<String,Either<Material,String>> materials, List<BlockElement> parts) {
     this.parts = parts;
-    this.textures = textures;
+    this.materials = materials;
     this.parentLocation = parentLocation;
   }
 

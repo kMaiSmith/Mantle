@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.Material;
-import net.minecraftforge.client.model.IModelConfiguration;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 
 import javax.annotation.Nullable;
@@ -14,7 +13,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 @AllArgsConstructor
-public class ModelTextureIteratable implements Iterable<Map<String,Either<Material, String>>> {
+public class ModelTextureIterable implements Iterable<Map<String,Either<Material, String>>> {
   /** Initial map for iteration */
   @Nullable
   private final Map<String,Either<Material, String>> startMap;
@@ -26,22 +25,22 @@ public class ModelTextureIteratable implements Iterable<Map<String,Either<Materi
    * Creates an iterable over the given model
    * @param model  Model
    */
-  public ModelTextureIteratable(BlockModel model) {
+  public ModelTextureIterable(BlockModel model) {
     this(null, model);
   }
 
   /**
    *
-   * @param owner     Model configuration owner
+   * @param bakingContext Model configuration owner
    * @param fallback  Fallback in case the owner does not contain a block model
    * @return  Iteratable over block model texture maps
    */
-  public static ModelTextureIteratable of(IGeometryBakingContext bakingContext, SimpleBlockModel fallback) {
-    UnbakedModel unbaked = bakingContext.getOwnerModel();
+  public static ModelTextureIterable of(IGeometryBakingContextWithParent bakingContext, SimpleBlockModel fallback) {
+    UnbakedModel unbaked = bakingContext.getParent();
     if (unbaked instanceof BlockModel) {
-      return new ModelTextureIteratable(null, (BlockModel)unbaked);
+      return new ModelTextureIterable(null, (BlockModel)unbaked);
     }
-    return new ModelTextureIteratable(fallback.getMaterial(), fallback.getParent());
+    return new ModelTextureIterable(fallback.getMaterials(), fallback.getParent());
   }
 
   @Override

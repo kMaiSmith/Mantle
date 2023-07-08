@@ -1,5 +1,7 @@
 package slimeknights.mantle.client.model.util;
 
+import net.minecraft.client.model.Model;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.Material;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 

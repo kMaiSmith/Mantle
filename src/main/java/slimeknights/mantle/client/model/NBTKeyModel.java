@@ -35,11 +35,10 @@ import net.minecraftforge.client.model.IModelLoader;
 import net.minecraftforge.client.model.ItemLayerModel;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.client.model.PerspectiveMapWrapper;
-import net.minecraftforge.client.model.geometry.GeometryLoaderManager;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
 import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
-import slimeknights.mantle.client.model.util.ModelTextureIteratable;
+import slimeknights.mantle.client.model.util.ModelTextureIterable;
 import slimeknights.mantle.data.GenericLoaderRegistry;
 import slimeknights.mantle.util.JsonHelper;
 
@@ -93,7 +92,7 @@ public class NBTKeyModel implements IUnbakedGeometry<NBTKeyModel> {
     if (extraTexturesKey != null) {
       UnbakedModel model = modelGetter.apply(extraTexturesKey);
       if (model instanceof BlockModel) {
-        ModelTextureIteratable iterable = new ModelTextureIteratable(null, (BlockModel) model);
+        ModelTextureIterable iterable = new ModelTextureIterable(null, (BlockModel) model);
         for (Map<String,Either<Material,String>> map : iterable) {
           for (String key : map.keySet()) {
             if (!textures.containsKey(key) && owner.hasMaterial(key)) {
