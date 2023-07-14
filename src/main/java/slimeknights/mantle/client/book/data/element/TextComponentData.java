@@ -1,7 +1,6 @@
 package slimeknights.mantle.client.book.data.element;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 
 public class TextComponentData {
 
@@ -16,12 +15,11 @@ public class TextComponentData {
   public Component[] tooltips = null;
 
   public TextComponentData(String text) {
-    this(new TextComponent(text));
+    this(Component.literal(text));
   }
 
   public TextComponentData(Component text) {
     this.text = text;
   }
-
 
 }

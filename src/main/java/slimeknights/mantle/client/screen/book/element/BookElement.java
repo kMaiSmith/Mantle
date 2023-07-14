@@ -9,12 +9,7 @@ import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraftforge.client.RenderProperties;
-import org.jetbrains.annotations.Debug;
-import slimeknights.mantle.client.render.RenderingHelper;
 import slimeknights.mantle.client.screen.book.BookScreen;
-
-import java.awt.image.renderable.RenderContext;
 import java.util.List;
 import java.util.Optional;
 

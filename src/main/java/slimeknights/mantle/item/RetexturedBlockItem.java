@@ -3,6 +3,7 @@ package slimeknights.mantle.item;
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.Registry;
+import net.minecraft.data.BuiltinRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
@@ -107,7 +108,7 @@ public class RetexturedBlockItem extends BlockTooltipItem {
     if (block == null || block == Blocks.AIR) {
       return setTexture(stack, "");
     }
-    return setTexture(stack, Objects.requireNonNull(block.getRegistryName()).toString());
+    return setTexture(stack, Objects.requireNonNull(Registry.BLOCK.getKey(block)).toString());
   }
 
   /**
