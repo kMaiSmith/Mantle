@@ -57,19 +57,6 @@ public final class RetexturedHelper {
     return nbt.getString(TAG_TEXTURE);
   }
 
-  /**
-   * Gets the name of the texture from the block
-   * @param block  Block
-   * @return  Name of the texture, or empty if the block is air
-   */
-  public static String getTextureName(Block block) {
-    if (block == Blocks.AIR) {
-      return "";
-    }
-    return Objects.requireNonNull(block.getRenderPropertiesInternal().).toString();
-  }
-
-
   /* Setting */
 
   /**

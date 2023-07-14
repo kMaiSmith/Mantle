@@ -30,7 +30,6 @@ import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.BookLoader;
 import slimeknights.mantle.client.book.repository.FileRepository;
 import slimeknights.mantle.client.model.FallbackModelLoader;
-import slimeknights.mantle.client.model.NBTKeyModel;
 import slimeknights.mantle.client.model.RetexturedModel;
 import slimeknights.mantle.client.model.connected.ConnectedModel;
 import slimeknights.mantle.client.model.fluid.FluidTextureModel;
