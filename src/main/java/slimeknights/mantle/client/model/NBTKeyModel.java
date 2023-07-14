@@ -14,9 +14,11 @@ import lombok.RequiredArgsConstructor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockModel;
+import net.minecraft.client.renderer.block.model.ItemModelGenerator;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.block.model.ItemTransforms.TransformType;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.Material;
@@ -35,9 +37,12 @@ import net.minecraftforge.client.model.IModelLoader;
 import net.minecraftforge.client.model.ItemLayerModel;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.client.model.PerspectiveMapWrapper;
+import net.minecraftforge.client.model.SimpleModelState;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
+import net.minecraftforge.client.model.geometry.IGeometryLoader;
 import net.minecraftforge.client.model.geometry.IModelGeometry;
 import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
+import net.minecraftforge.client.model.geometry.UnbakedGeometryHelper;
 import slimeknights.mantle.client.model.util.ModelTextureIterable;
 import slimeknights.mantle.data.GenericLoaderRegistry;
 import slimeknights.mantle.util.JsonHelper;
@@ -46,6 +51,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -56,6 +62,8 @@ import java.util.function.Function;
 public class NBTKeyModel implements IUnbakedGeometry<NBTKeyModel> {
   /** Model loader instance */
   public static final Loader LOADER = new Loader();
+
+  private static final ItemModelGenerator ITEM_MODEL_GENERATOR = new ItemModelGenerator();
 
   /** Map of statically registered extra textures, used for addon mods */
   private static final Multimap<ResourceLocation,Pair<String,ResourceLocation>> EXTRA_TEXTURES = HashMultimap.create();
@@ -105,7 +113,7 @@ public class NBTKeyModel implements IUnbakedGeometry<NBTKeyModel> {
       for (Pair<String,ResourceLocation> extra : EXTRA_TEXTURES.get(extraTexturesKey)) {
         String key = extra.getFirst();
         if (!textures.containsKey(key)) {
-          textures.put(key, GenericLoaderRegistry.blockMaterial(extra.getSecond()));
+          textures.put(key, new Material(TextureAtlas.LOCATION_BLOCKS, extra.getSecond()));
         }
       }
     }
@@ -116,14 +124,14 @@ public class NBTKeyModel implements IUnbakedGeometry<NBTKeyModel> {
   /** Bakes a model for the given texture */
   private static BakedModel bakeModel(IGeometryBakingContext owner, Material texture, Function<Material,TextureAtlasSprite> spriteGetter, ImmutableMap<TransformType,Transformation> transformMap, ItemOverrides overrides) {
     TextureAtlasSprite sprite = spriteGetter.apply(texture);
-    ImmutableList<BakedQuad> quads = ItemLayerModel.getQuadsForSprite(-1, sprite, Transformation.identity());
-    return new BakedItemModel(quads, sprite, transformMap, overrides, true, owner.isSideLit());
+    List<BakedQuad> quads = UnbakedGeometryHelper.bakeElements(UnbakedGeometryHelper.createUnbakedItemElements(-1, sprite), spriteGetter, new SimpleModelState(Transformation.identity()), sprite.getName());
+    return new BakedItemModel(quads, sprite, transformMap, overrides, owner.useBlockLight());
   }
 
   @Override
   public BakedModel bake(IGeometryBakingContext owner, ModelBakery bakery, Function<Material,TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides, ResourceLocation modelLocation) {
     ImmutableMap.Builder<String, BakedModel> variants = ImmutableMap.builder();
-    ImmutableMap<TransformType,Transformation> transformMap = Maps.immutableEnumMap(PerspectiveMapWrapper.getTransforms(owner.getCombinedTransform()));
+    ImmutableMap<TransformType,Transformation> transformMap = Maps.immutableEnumMap(PerspectiveMapWrapper.getTransforms(owner.getTransforms()));
     for (Entry<String,Material> entry : textures.entrySet()) {
       String key = entry.getKey();
       if (!key.equals("default")) {
@@ -157,12 +165,9 @@ public class NBTKeyModel implements IUnbakedGeometry<NBTKeyModel> {
   }
 
   /** Loader logic */
-  private static class Loader implements IModelLoader<NBTKeyModel> {
+  private static class Loader implements IGeometryLoader<NBTKeyModel> {
     @Override
-    public void onResourceManagerReload(ResourceManager resourceManager) {}
-
-    @Override
-    public NBTKeyModel read(JsonDeserializationContext deserializationContext, JsonObject modelContents) {
+    public NBTKeyModel read(JsonObject modelContents, JsonDeserializationContext deserializationContext) {
       String key = GsonHelper.getAsString(modelContents, "nbt_key");
       ResourceLocation extraTexturesKey = null;
       if (modelContents.has("extra_textures_key")) {
